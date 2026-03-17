@@ -301,16 +301,13 @@ function getMonth(key) {
   return monthData[key];
 }
 function seedCats(key) {
+  // Copy categories from previous month if it exists, otherwise start empty
   const [y, m] = key.split('-').map(Number);
   const prev = monthKey(new Date(y, m - 2, 1));
-  if (monthData[prev]) return monthData[prev].categories.map(c => ({ ...c }));
-  return [
-    { id: nextId++, name: 'Housing',         budget: 1500 },
-    { id: nextId++, name: 'Food & Groceries', budget: 600 },
-    { id: nextId++, name: 'Transport',        budget: 300 },
-    { id: nextId++, name: 'Utilities',        budget: 200 },
-    { id: nextId++, name: 'Entertainment',    budget: 150 },
-  ];
+  if (monthData[prev] && monthData[prev].categories.length > 0) {
+    return monthData[prev].categories.map(c => ({ ...c }));
+  }
+  return [];
 }
 
 // ── Persistence ───────────────────────────────────────────────────────────────
@@ -386,37 +383,41 @@ function drawDonut(data, spentByCat) {
 
 
 // ── Budget Progress Bar ───────────────────────────────────────────────────────
-function renderBudgetProgress(data, spentByCat, totalBudgeted, totalSpent, totalSaved) {
-  const spentPct = totalBudgeted > 0 ? Math.min((totalSpent / totalBudgeted) * 100, 100) : 0;
-  const savedPct = totalBudgeted > 0 ? Math.min((totalSaved / totalBudgeted) * 100, Math.max(0, 100 - spentPct)) : 0;
-  const usedPct  = totalBudgeted > 0 ? Math.round(((totalSpent + totalSaved) / totalBudgeted) * 100) : 0;
+function renderBudgetProgress(data, spentByCat, totalBudgeted, totalSpent, totalSaved, totalIncome) {
+  // Total income = 100% — split into expenses, savings, remaining
+  const base        = totalIncome > 0 ? totalIncome : 1;
+  const spentPct    = Math.min((totalSpent  / base) * 100, 100);
+  const savedPct    = Math.min((totalSaved  / base) * 100, Math.max(0, 100 - spentPct));
+  const totalUsed   = totalSpent + totalSaved;
+  const usedPct     = totalIncome > 0 ? Math.round((totalUsed / totalIncome) * 100) : 0;
 
   const spentBar = document.getElementById('bp-bar-spent');
   const savedBar = document.getElementById('bp-bar-saved');
   if (spentBar) spentBar.style.width = spentPct + '%';
   if (savedBar) savedBar.style.width = savedPct + '%';
 
+  // Labels: "Expenses + Savings  of  Total Income"
   const bpSpent  = document.getElementById('bp-spent');
   const bpBudget = document.getElementById('bp-budget');
-  if (bpSpent)  bpSpent.textContent  = fmt(totalSpent);
-  if (bpBudget) bpBudget.textContent = fmt(totalBudgeted);
+  if (bpSpent)  bpSpent.textContent  = fmt(totalUsed);
+  if (bpBudget) bpBudget.textContent = fmt(totalIncome);
 
   const pctEl = document.getElementById('bp-pct');
   if (pctEl) {
     pctEl.textContent = usedPct + '%';
-    pctEl.className = 'bp-pct-val' + (usedPct > 100 ? ' over' : usedPct >= 75 ? ' warning' : '');
+    pctEl.className = 'bp-pct-val' + (usedPct > 100 ? ' over' : usedPct >= 80 ? ' warning' : '');
   }
 
   const badge = document.getElementById('bp-status-badge');
   if (badge) {
-    if (totalBudgeted === 0) {
-      badge.textContent = 'No Budget Set';
+    if (totalIncome === 0) {
+      badge.textContent = 'No Income Set';
       badge.className = 'bp-status-badge warning';
-    } else if (totalSpent > totalBudgeted) {
+    } else if (totalUsed > totalIncome) {
       badge.textContent = '⚠ Over Budget';
       badge.className = 'bp-status-badge over';
-    } else if (usedPct >= 75) {
-      badge.textContent = '⚡ Heads Up';
+    } else if (usedPct >= 80) {
+      badge.textContent = '⚡ Nearly Full';
       badge.className = 'bp-status-badge warning';
     } else {
       badge.textContent = '✓ On Track';
@@ -469,13 +470,14 @@ function render() {
   const totalBudgeted = data.categories.reduce((s, c) => s + c.budget, 0);
   const totalSpent    = data.expenses.reduce((s, e) => s + e.amount, 0);
   const totalSaved    = data.savings.reduce((s, v) => s + v.amount, 0);
-  const remaining     = totalIncome - totalBudgeted - totalSaved;
+  // Remaining = total income minus all outflows (expenses + savings)
+  const remaining     = totalIncome - totalSpent - totalSaved;
 
   const spentByCat = {};
   data.expenses.forEach(e => { spentByCat[e.catId] = (spentByCat[e.catId] || 0) + e.amount; });
 
   // ── Budget progress bar ──
-  renderBudgetProgress(data, spentByCat, totalBudgeted, totalSpent, totalSaved);
+  renderBudgetProgress(data, spentByCat, totalBudgeted, totalSpent, totalSaved, totalIncome);
 
   // ── Persistent alert panel ──
   renderAlerts(data);
@@ -498,9 +500,25 @@ function render() {
     srcCount === 0 ? 'Add income sources below'
     : srcCount === 1 ? '1 income source' : `${srcCount} income sources`;
 
-  // remaining color
+  // remaining color + sub-label
   const remEl = document.getElementById('sum-remaining');
-  if (remEl) remEl.style.color = remaining < 0 ? 'var(--coral)' : remaining > 0 ? 'var(--amber)' : 'var(--t1)';
+  if (remEl) remEl.style.color = remaining < 0 ? 'var(--coral)' : remaining > 0 ? 'var(--emerald)' : 'var(--t1)';
+  const remPill = document.getElementById('hpill-remaining');
+  if (remPill) {
+    remPill.className = 'hpill ' + (remaining < 0 ? 'hpill-coral' : remaining > 0 ? 'hpill-emerald' : 'hpill-amber');
+  }
+  const remLblEl = document.getElementById('remaining-sub-lbl');
+  if (remLblEl) {
+    if (totalIncome === 0) {
+      remLblEl.textContent = 'Add income first';
+    } else if (remaining > 0) {
+      remLblEl.textContent = 'Left after expenses & savings';
+    } else if (remaining < 0) {
+      remLblEl.textContent = 'Overspent by ' + fmt(Math.abs(remaining));
+    } else {
+      remLblEl.textContent = 'Fully accounted for';
+    }
+  }
 
   // ── Donut ──
   drawDonut(data, spentByCat);
