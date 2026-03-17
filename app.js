@@ -722,6 +722,7 @@ function renderCalendar(data) {
 
       const classes = [
         'cal-day',
+        'clickable',                      // all valid days are now clickable
         hasTx     ? 'has-tx'      : '',
         hasExp    ? heatClass      : '',
         hasIncome ? 'has-income'   : '',
@@ -729,7 +730,7 @@ function renderCalendar(data) {
         selected  ? 'selected'     : '',
       ].filter(Boolean).join(' ');
 
-      html += `<div class="${classes}" onclick="selectDay('${iso}')" title="${iso}">
+      html += `<div class="${classes}" onclick="selectDay('${iso}')" title="Click to add or view transactions">
         <span class="cal-day-num">${day}</span>
         ${hasTx ? `<span class="cal-day-dot"></span>` : ''}
         ${hasExp ? `<span class="cal-day-bar"></span>` : ''}
@@ -764,19 +765,16 @@ function normaliseDate(date, y, m) {
 }
 
 function selectDay(iso) {
-  const data = getMonth(activeKey);
   if (calSelectedDay === iso) {
     calSelectedDay = null;
     closeDayDetail();
-    // Re-render to deselect
     document.querySelectorAll('.cal-day.selected').forEach(el => el.classList.remove('selected'));
     return;
   }
   calSelectedDay = iso;
-  // Update selected class without full re-render
   document.querySelectorAll('.cal-day.selected').forEach(el => el.classList.remove('selected'));
   document.querySelectorAll(`.cal-day[onclick="selectDay('${iso}')"]`).forEach(el => el.classList.add('selected'));
-  showDayDetail(iso, data);
+  showDayDetail(iso, getMonth(activeKey));
 }
 
 function showDayDetail(iso, data) {
@@ -787,47 +785,65 @@ function showDayDetail(iso, data) {
   if (!detailEl) return;
 
   const [y, m, d] = iso.split('-').map(Number);
-  const label = new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
-  dateEl.textContent = label;
+  const dateObj = new Date(y, m - 1, d);
+  const label   = dateObj.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  const isToday = iso === today();
+  const isPast  = dateObj < new Date(new Date().setHours(0,0,0,0));
 
-  // Gather all transactions for this day
+  // Header: date label + chip
+  const chipClass = isToday ? '' : isPast ? 'past' : '';
+  const chipLabel = isToday ? 'Today' : isPast ? 'Past' : 'Future';
+  dateEl.innerHTML = `${label} <span class="cal-detail-date-chip ${chipClass}">${chipLabel}</span>`;
+
+  // Populate the category dropdowns in the form
+  const catSel = document.getElementById('cal-exp-cat');
+  if (catSel) {
+    catSel.innerHTML = '<option value="">Category</option>' +
+      data.categories.map(c => `<option value="${c.id}">${c.name}</option>`).join('');
+  }
+
+  // Gather transactions for this day
   const txs = [];
   data.expenses.forEach(e => {
     const k = normaliseDate(e.date, y, m);
     if (k === iso) {
       const cat = data.categories.find(c => c.id === e.catId);
-      txs.push({ type: 'expense', name: e.desc, cat: cat?.name || '', amount: e.amount, icon: cat ? iconFor(data.categories.indexOf(cat)) : '💸' });
+      txs.push({ id: e.id, type: 'expense', name: e.desc, cat: cat?.name || '', amount: e.amount, icon: cat ? iconFor(data.categories.indexOf(cat)) : '💸' });
     }
   });
   data.income.forEach(i => {
     const k = normaliseDate(i.date, y, m);
-    if (k === iso) txs.push({ type: 'income', name: i.name, cat: 'Income', amount: i.amount, icon: '💰' });
+    if (k === iso) txs.push({ id: i.id, type: 'income', name: i.name, cat: 'Income', amount: i.amount, icon: '💰' });
   });
   data.savings.forEach(s => {
     const k = normaliseDate(s.date, y, m);
-    if (k === iso) txs.push({ type: 'saving', name: s.desc, cat: 'Savings', amount: s.amount, icon: '🏦' });
+    if (k === iso) txs.push({ id: s.id, type: 'saving', name: s.desc, cat: 'Savings', amount: s.amount, icon: '🏦' });
   });
 
+  // Render transaction list (or empty state)
   if (txs.length === 0) {
-    closeDayDetail();
-    return;
+    listEl.innerHTML = '<div class="empty-note" style="padding:4px 0">No transactions on this day yet.</div>';
+    totalEl.innerHTML = '';
+  } else {
+    listEl.innerHTML = txs.map(tx => `
+      <div class="cal-tx-row">
+        <span class="cal-tx-icon">${tx.icon}</span>
+        <div class="cal-tx-info">
+          <div class="cal-tx-name">${tx.name}</div>
+          <div class="cal-tx-cat">${tx.cat}</div>
+        </div>
+        <span class="cal-tx-type ${tx.type}">${tx.type}</span>
+        <span class="cal-tx-amt ${tx.type}">${tx.type === 'expense' ? '-' : '+'}${fmt(tx.amount)}</span>
+        <button class="del-btn" onclick="calDelTx('${tx.type}', ${tx.id})">✕</button>
+      </div>`).join('');
+
+    const totalExp = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+    totalEl.innerHTML = `<span>${txs.length} transaction${txs.length > 1 ? 's' : ''}</span><span>Total spent <strong>${fmt(totalExp)}</strong></span>`;
   }
 
-  listEl.innerHTML = txs.map(tx => `
-    <div class="cal-tx-row">
-      <span class="cal-tx-icon">${tx.icon}</span>
-      <div class="cal-tx-info">
-        <div class="cal-tx-name">${tx.name}</div>
-        <div class="cal-tx-cat">${tx.cat}</div>
-      </div>
-      <span class="cal-tx-type ${tx.type}">${tx.type}</span>
-      <span class="cal-tx-amt ${tx.type}">${tx.type === 'expense' ? '-' : '+'}${fmt(tx.amount)}</span>
-    </div>`).join('');
-
-  const totalExp = txs.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
-  totalEl.innerHTML = `<span>${txs.length} transaction${txs.length > 1 ? 's' : ''}</span><span>Total spent <strong>${fmt(totalExp)}</strong></span>`;
-
   detailEl.style.display = 'block';
+  // Scroll into view
+  setTimeout(() => detailEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' }), 50);
 }
 
 function closeDayDetail() {
@@ -835,6 +851,80 @@ function closeDayDetail() {
   if (el) el.style.display = 'none';
   calSelectedDay = null;
   document.querySelectorAll('.cal-day.selected').forEach(el => el.classList.remove('selected'));
+}
+
+// ── Tab switcher ──────────────────────────────────────────────────────────────
+function switchCalTab(type) {
+  ['expense','income','saving'].forEach(t => {
+    document.getElementById(`cal-form-${t}`).style.display  = t === type ? 'block' : 'none';
+    document.getElementById(`cal-tab-${t}`).classList.toggle('active', t === type);
+  });
+}
+
+// ── Calendar add actions (use calSelectedDay as the date) ─────────────────────
+function calAddExpense() {
+  if (!calSelectedDay) return;
+  const desc  = document.getElementById('cal-exp-desc').value.trim();
+  const amt   = parseFloat(document.getElementById('cal-exp-amt').value);
+  const catId = parseInt(document.getElementById('cal-exp-cat').value);
+  if (!desc || isNaN(amt) || amt <= 0 || !catId) return shake('cal-exp-amt');
+  getMonth(activeKey).expenses.push({ id: nextId++, desc, amount: amt, catId, date: calSelectedDay });
+  document.getElementById('cal-exp-desc').value = '';
+  document.getElementById('cal-exp-amt').value  = '';
+  save();
+  checkBudgetAlerts(getMonth(activeKey));
+  render();
+  // Re-open the same day panel after re-render
+  setTimeout(() => {
+    calSelectedDay = calSelectedDay; // keep it
+    showDayDetail(calSelectedDay, getMonth(activeKey));
+    document.querySelectorAll(`.cal-day[onclick="selectDay('${calSelectedDay}')"]`).forEach(el => el.classList.add('selected'));
+  }, 50);
+}
+
+function calAddIncome() {
+  if (!calSelectedDay) return;
+  const name = document.getElementById('cal-inc-name').value.trim();
+  const amt  = parseFloat(document.getElementById('cal-inc-amt').value);
+  if (!name || isNaN(amt) || amt <= 0) return shake('cal-inc-amt');
+  getMonth(activeKey).income.push({ id: nextId++, name, amount: amt, date: calSelectedDay });
+  document.getElementById('cal-inc-name').value = '';
+  document.getElementById('cal-inc-amt').value  = '';
+  save(); render();
+  setTimeout(() => {
+    showDayDetail(calSelectedDay, getMonth(activeKey));
+    document.querySelectorAll(`.cal-day[onclick="selectDay('${calSelectedDay}')"]`).forEach(el => el.classList.add('selected'));
+  }, 50);
+}
+
+function calAddSaving() {
+  if (!calSelectedDay) return;
+  const desc = document.getElementById('cal-sav-desc').value.trim();
+  const amt  = parseFloat(document.getElementById('cal-sav-amt').value);
+  if (!desc || isNaN(amt) || amt <= 0) return shake('cal-sav-amt');
+  getMonth(activeKey).savings.push({ id: nextId++, desc, amount: amt, date: calSelectedDay });
+  document.getElementById('cal-sav-desc').value = '';
+  document.getElementById('cal-sav-amt').value  = '';
+  save(); render();
+  setTimeout(() => {
+    showDayDetail(calSelectedDay, getMonth(activeKey));
+    document.querySelectorAll(`.cal-day[onclick="selectDay('${calSelectedDay}')"]`).forEach(el => el.classList.add('selected'));
+  }, 50);
+}
+
+function calDelTx(type, id) {
+  const data = getMonth(activeKey);
+  const iso  = calSelectedDay;
+  if (type === 'expense') data.expenses = data.expenses.filter(e => e.id !== id);
+  if (type === 'income')  data.income   = data.income.filter(i => i.id !== id);
+  if (type === 'saving')  data.savings  = data.savings.filter(s => s.id !== id);
+  save(); render();
+  setTimeout(() => {
+    if (iso) {
+      showDayDetail(iso, getMonth(activeKey));
+      document.querySelectorAll(`.cal-day[onclick="selectDay('${iso}')"]`).forEach(el => el.classList.add('selected'));
+    }
+  }, 50);
 }
 
 // ── Actions ───────────────────────────────────────────────────────────────────

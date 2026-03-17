@@ -191,14 +191,55 @@
           <span class="chip c-blue" id="cal-badge">0 days</span>
         </div>
         <div class="cal-grid" id="cal-grid"></div>
-        <!-- Day detail popup -->
+
+        <!-- Day panel — opens when any day is clicked -->
         <div class="cal-detail" id="cal-detail" style="display:none">
           <div class="cal-detail-head">
             <span class="cal-detail-date" id="cal-detail-date"></span>
             <button class="cal-detail-close" onclick="closeDayDetail()">✕</button>
           </div>
+
+          <!-- Existing transactions for this day -->
           <div class="cal-detail-list" id="cal-detail-list"></div>
           <div class="cal-detail-total" id="cal-detail-total"></div>
+
+          <!-- Inline quick-add form -->
+          <div class="cal-add-section">
+            <div class="cal-add-title">Add transaction for this day</div>
+            <div class="cal-add-tabs">
+              <button class="cal-tab active" id="cal-tab-expense" onclick="switchCalTab('expense')">Expense</button>
+              <button class="cal-tab" id="cal-tab-income" onclick="switchCalTab('income')">Income</button>
+              <button class="cal-tab" id="cal-tab-saving" onclick="switchCalTab('saving')">Saving</button>
+            </div>
+
+            <!-- Expense form -->
+            <div class="cal-form" id="cal-form-expense">
+              <input class="inp" type="text" id="cal-exp-desc" placeholder="Description"/>
+              <div class="frow" style="margin-top:6px">
+                <input class="inp" type="number" id="cal-exp-amt" placeholder="Amount" min="0"/>
+                <select class="inp" id="cal-exp-cat"><option value="">Category</option></select>
+                <button class="btn b-coral" onclick="calAddExpense()">+ Add</button>
+              </div>
+            </div>
+
+            <!-- Income form -->
+            <div class="cal-form" id="cal-form-income" style="display:none">
+              <div class="frow">
+                <input class="inp" type="text" id="cal-inc-name" placeholder="Source (e.g. Salary)"/>
+                <input class="inp w80" type="number" id="cal-inc-amt" placeholder="Amount" min="0"/>
+                <button class="btn b-blue" onclick="calAddIncome()">+ Add</button>
+              </div>
+            </div>
+
+            <!-- Saving form -->
+            <div class="cal-form" id="cal-form-saving" style="display:none">
+              <div class="frow">
+                <input class="inp" type="text" id="cal-sav-desc" placeholder="Description"/>
+                <input class="inp w80" type="number" id="cal-sav-amt" placeholder="Amount" min="0"/>
+                <button class="btn b-emerald" onclick="calAddSaving()">+ Save</button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

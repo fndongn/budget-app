@@ -1490,3 +1490,84 @@ html.light .theme-toggle {
 .sync-saved   { color: var(--emerald); background: var(--emerald-dim); border-color: rgba(52,211,153,0.2); }
 .sync-error   { color: var(--coral);   background: var(--coral-dim);   border-color: rgba(249,112,102,0.2); }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ── Remaining pill sub-label ────────────────────────────────────────────────── */
+.hpill-sub {
+  font-size: 10px;
+  font-weight: 500;
+  opacity: 0.75;
+  line-height: 1.3;
+  max-width: 130px;
+}
+.hpill-coral   { border-color: rgba(224,75,58,0.25) !important; }
+.hpill-coral   .hpill-val { color: var(--coral) !important; }
+.hpill-coral   .hpill-sub { color: var(--coral); }
+.hpill-emerald .hpill-sub { color: var(--emerald); }
+
+/* ── Calendar inline add form ────────────────────────────────────────────────── */
+.cal-add-section {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.cal-add-title {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.07em;
+  color: var(--t3);
+  margin-bottom: 8px;
+}
+.cal-add-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 10px;
+}
+.cal-tab {
+  flex: 1;
+  height: 28px;
+  background: var(--bg3);
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: 'Cabinet Grotesk', sans-serif;
+  color: var(--t2);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.cal-tab:hover { background: var(--surface2); color: var(--t1); }
+.cal-tab.active {
+  background: var(--blue-dim);
+  border-color: var(--blue);
+  color: var(--blue);
+}
+#cal-tab-income.active  { background: var(--blue-dim);    border-color: var(--blue);    color: var(--blue);    }
+#cal-tab-saving.active  { background: var(--emerald-dim); border-color: var(--emerald); color: var(--emerald); }
+#cal-tab-expense.active { background: var(--coral-dim);   border-color: var(--coral);   color: var(--coral);   }
+
+.cal-form { animation: itemIn 0.2s ease both; }
+
+/* Date chip shown in detail header when editing a past day */
+.cal-detail-date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  background: var(--blue-dim);
+  color: var(--blue);
+  border: 1px solid rgba(79,142,247,0.25);
+  padding: 2px 8px;
+  border-radius: 99px;
+  margin-left: 8px;
+  font-family: 'Instrument Mono', monospace;
+}
+.cal-detail-date-chip.past { background: var(--amber-dim); color: var(--amber); border-color: rgba(251,191,36,0.3); }
+
+/* All calendar days are now clickable */
+.cal-day.clickable { cursor: pointer; }
+.cal-day.clickable:hover {
+  background: var(--bg3);
+  border-color: var(--border2);
+  transform: scale(1.06);
+}
