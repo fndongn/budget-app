@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Budgtr — Personal Finance</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=Instrument+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css"/>
+</head>
+<body>
+
+<!-- Toast notification container -->
+<div id="toast-container"></div>
+
+<div class="orb orb-1"></div>
+<div class="orb orb-2"></div>
+<div class="orb orb-3"></div>
+
+<div class="app">
+
+  <!-- TOPBAR -->
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-gem"></div>
+      <span class="brand-name">Budgtr</span>
+    </div>
+    <span id="sync-status" class="sync-status sync-saved">
+      <span class="sync-icon">✓</span>Synced
+    </span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      <!-- Theme toggle -->
+      <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">
+        <span class="theme-icon-dark">🌙</span>
+        <span class="theme-icon-light">☀️</span>
+        <div class="toggle-track">
+          <div class="toggle-thumb"></div>
+        </div>
+        <span id="theme-label">Dark</span>
+      </button>
+      <div class="month-nav">
+        <button class="mnav-btn" onclick="changeMonth(-1)">&#8249;</button>
+        <span class="mnav-label" id="month-label">—</span>
+        <button class="mnav-btn" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-left">
+      <div class="hero-eyebrow">Total Income</div>
+      <div class="hero-amount" id="sum-income">$0</div>
+      <div class="hero-sub" id="income-sub">Add income sources below</div>
+    </div>
+    <div class="hero-pills">
+      <div class="hpill hpill-blue">
+        <span class="hpill-lbl">Budgeted</span>
+        <span class="hpill-val" id="sum-budgeted">$0</span>
+      </div>
+      <div class="hpill hpill-coral">
+        <span class="hpill-lbl">Spent</span>
+        <span class="hpill-val" id="sum-spent">$0</span>
+      </div>
+      <div class="hpill hpill-emerald">
+        <span class="hpill-lbl">Saved</span>
+        <span class="hpill-val" id="sum-saved">$0</span>
+      </div>
+      <div class="hpill hpill-amber" id="hpill-remaining">
+        <span class="hpill-lbl">Remaining</span>
+        <span class="hpill-val" id="sum-remaining">$0</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- OVERALL BUDGET PROGRESS -->
+  <div class="budget-progress-card">
+    <div class="bp-header">
+      <div class="bp-title-group">
+        <span class="bp-title">Overall Budget vs Spending</span>
+        <span class="bp-status-badge" id="bp-status-badge">On Track</span>
+      </div>
+      <div class="bp-amounts">
+        <span class="bp-spent-label">Spent <strong id="bp-spent">$0</strong></span>
+        <span class="bp-sep">of</span>
+        <span class="bp-budget-label">Budget <strong id="bp-budget">$0</strong></span>
+      </div>
+    </div>
+
+    <!-- Main stacked bar -->
+    <div class="bp-bar-wrap">
+      <div class="bp-bar-track">
+        <div class="bp-bar-spent" id="bp-bar-spent"></div>
+        <div class="bp-bar-saved" id="bp-bar-saved"></div>
+      </div>
+      <div class="bp-bar-markers">
+        <div class="bp-marker" id="bp-marker-75" style="left:75%">
+          <div class="bp-marker-line"></div>
+          <span class="bp-marker-lbl">75%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Legend + percentage -->
+    <div class="bp-footer">
+      <div class="bp-legend">
+        <span class="bp-leg-dot spent"></span><span class="bp-leg-txt">Spent</span>
+        <span class="bp-leg-dot saved"></span><span class="bp-leg-txt">Saved</span>
+        <span class="bp-leg-dot free"></span><span class="bp-leg-txt">Available</span>
+      </div>
+      <div class="bp-pct-group">
+        <span class="bp-pct-lbl">Used</span>
+        <span class="bp-pct-val" id="bp-pct">0%</span>
+      </div>
+    </div>
+
+    <!-- Per-category mini bars -->
+    <div class="bp-cats" id="bp-cats"></div>
+  </div>
+
+  <!-- BUDGET ALERTS PANEL -->
+  <div id="alerts-panel" class="alerts-panel" style="display:none"></div>
+
+  <!-- MAIN GRID -->
+  <div class="main-grid">
+
+    <!-- COL 1 -->
+    <div class="col">
+      <div class="card s1">
+        <div class="card-head">
+          <h2 class="card-title">Income</h2>
+          <span class="chip c-blue" id="income-badge">$0</span>
+        </div>
+        <div class="item-list" id="income-list"></div>
+        <div class="frow">
+          <input class="inp" type="text" id="inc-name" placeholder="Source (e.g. Salary)"/>
+          <input class="inp w80" type="number" id="inc-amt" placeholder="Amount" min="0"/>
+          <button class="btn b-blue" onclick="addIncome()">+ Add</button>
+        </div>
+      </div>
+
+      <div class="card s2">
+        <div class="card-head">
+          <h2 class="card-title">Spending Breakdown</h2>
+        </div>
+        <div class="donut-wrap">
+          <canvas id="donut-canvas" width="180" height="180"></canvas>
+          <div class="donut-center">
+            <div class="donut-lbl">Spent</div>
+            <div class="donut-num" id="donut-val">$0</div>
+          </div>
+        </div>
+        <div id="donut-legend" class="legend"></div>
+      </div>
+    </div>
+
+    <!-- COL 2 -->
+    <div class="col">
+      <div class="card s2">
+        <div class="card-head">
+          <h2 class="card-title">Budget Categories</h2>
+          <span class="chip c-violet" id="cat-badge">$0</span>
+        </div>
+        <div class="cat-grid" id="cat-grid"></div>
+        <div class="frow">
+          <input class="inp" type="text" id="cat-name" placeholder="Category name"/>
+          <input class="inp w80" type="number" id="cat-budget" placeholder="Budget" min="0"/>
+          <button class="btn b-violet" onclick="addCategory()">+ Add</button>
+        </div>
+      </div>
+
+      <div class="card s3">
+        <div class="card-head">
+          <h2 class="card-title">Expenses</h2>
+          <span class="chip c-coral" id="exp-badge">$0</span>
+        </div>
+        <div class="exp-list" id="exp-list"></div>
+        <div class="frow">
+          <input class="inp" type="text" id="exp-desc" placeholder="Description"/>
+          <input class="inp w80" type="number" id="exp-amt" placeholder="Amount" min="0"/>
+          <select class="inp w100" id="exp-cat"><option value="">Category</option></select>
+          <button class="btn b-coral" onclick="addExpense()">+ Add</button>
+        </div>
+      </div>
+
+      <!-- TRANSACTION CALENDAR -->
+      <div class="card s4" id="cal-card">
+        <div class="card-head">
+          <h2 class="card-title">Transaction Calendar</h2>
+          <span class="chip c-blue" id="cal-badge">0 days</span>
+        </div>
+        <div class="cal-grid" id="cal-grid"></div>
+        <!-- Day detail popup -->
+        <div class="cal-detail" id="cal-detail" style="display:none">
+          <div class="cal-detail-head">
+            <span class="cal-detail-date" id="cal-detail-date"></span>
+            <button class="cal-detail-close" onclick="closeDayDetail()">✕</button>
+          </div>
+          <div class="cal-detail-list" id="cal-detail-list"></div>
+          <div class="cal-detail-total" id="cal-detail-total"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- COL 3 -->
+    <div class="col">
+      <div class="card card-savings s3">
+        <div class="card-head">
+          <h2 class="card-title">Savings</h2>
+          <span class="chip c-emerald" id="savings-badge">$0</span>
+        </div>
+
+        <div class="ring-block">
+          <div class="ring-wrap">
+            <svg viewBox="0 0 120 120" class="ring-svg">
+              <circle class="ring-track" cx="60" cy="60" r="48"/>
+              <circle class="ring-progress" id="ring-progress" cx="60" cy="60" r="48"
+                transform="rotate(-90 60 60)"
+                stroke-dasharray="301.59" stroke-dashoffset="301.59"/>
+            </svg>
+            <div class="ring-center">
+              <div class="ring-pct" id="ring-pct">0%</div>
+              <div class="ring-sub">of goal</div>
+            </div>
+          </div>
+          <div class="ring-details">
+            <label class="goal-label">Monthly Goal</label>
+            <div class="goal-inp-row">
+              <span class="goal-dollar">$</span>
+              <input type="number" class="goal-inp" id="savings-goal" placeholder="0" min="0" oninput="saveSavingsGoal()"/>
+            </div>
+            <div class="ring-status" id="ring-status">Set a goal to track progress</div>
+            <div class="alltime-row">
+              <span class="alltime-lbl">All-time savings</span>
+              <span class="alltime-amt" id="lifetime-val">$0</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="item-list" id="savings-list"></div>
+        <div class="frow">
+          <input class="inp" type="text" id="sav-desc" placeholder="Description"/>
+          <input class="inp w80" type="number" id="sav-amt" placeholder="Amount" min="0"/>
+          <button class="btn b-emerald" onclick="addSaving()">+ Save</button>
+        </div>
+      </div>
+
+      <div class="card s4">
+        <div class="card-head">
+          <h2 class="card-title">Monthly History</h2>
+        </div>
+        <div class="history-scroll">
+          <table class="htbl">
+            <thead><tr><th>Month</th><th>Income</th><th>Spent</th><th>Saved</th></tr></thead>
+            <tbody id="history-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
