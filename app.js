@@ -13,15 +13,27 @@ const PALETTE = [
 const CAT_ICONS = ['🏠','🛒','🚗','💡','🎬','💊','🏋️','✈️','📚','🍽️','👕','💻','🎵','🐾','🎮'];
 
 // ── Google Sheets API ─────────────────────────────────────────────────────────
-const SHEETS_URL   = 'YOUR_WEB_APP_URL_HERE';   // paste your deployed Web App URL
-const SHEETS_TOKEN = 'xK9mP2vL8qR4tYwZ433';  // must match the SECRET in Code.gs
+const SHEETS_URL   = 'xK9mP2vL8qR4tYwZ433';   // paste your deployed Web App URL
+const SHEETS_TOKEN = 'https://script.google.com/macros/s/AKfycbwHIDFIESLqKHEu7to6jqsa1xYj8aWCcAEBlapO_LJwOpA2RLpHrr3RDg29_S4blq60/exec';  // must match the SECRET in Code.gs
 let isSyncing = false;
 
 async function sheetsLoad() {
   try {
     showSyncStatus('loading');
-    const res  = await fetch(`${SHEETS_URL}?action=load&token=${SHEETS_TOKEN}`);
-    const data = await res.json();
+
+    // Use no-cors for saves, but for loads we need to read the response.
+    // Google Apps Script redirects — we handle it by passing credentials omit
+    // and using a plain GET which Apps Script handles without preflight.
+    const res = await fetch(
+      `${SHEETS_URL}?action=load&token=${SHEETS_TOKEN}`,
+      { method: 'GET', credentials: 'omit' }
+    );
+
+    const text = await res.text();
+    let data;
+    try { data = JSON.parse(text); }
+    catch(pe) { throw new Error('Bad response from server — check your Web App URL'); }
+
     if (data.error) throw new Error(data.error);
 
     monthData = {};
@@ -34,9 +46,13 @@ async function sheetsLoad() {
     (data.savings    || []).forEach(r => { ensure(r.monthKey); monthData[r.monthKey].savings.push(r); });
     (data.categories || []).forEach(r => { ensure(r.monthKey); monthData[r.monthKey].categories.push(r); });
 
-    const goalRes  = await fetch(`${SHEETS_URL}?action=loadSavingsGoal&token=${SHEETS_TOKEN}`);
-    const goalData = await goalRes.json();
-    savingsGoal = goalData || {};
+    const goalRes  = await fetch(
+      `${SHEETS_URL}?action=loadSavingsGoal&token=${SHEETS_TOKEN}`,
+      { method: 'GET', credentials: 'omit' }
+    );
+    const goalText = await goalRes.text();
+    try { savingsGoal = JSON.parse(goalText) || {}; }
+    catch(pe) { savingsGoal = {}; }
 
     showSyncStatus('saved');
     return true;
@@ -60,12 +76,21 @@ async function sheetsSave() {
       d.categories.forEach(r => categories.push({ monthKey: key, ...r }));
     });
 
+    // POST with no-cors — we don't need to read the response for saves,
+    // we just need the data to reach Google Sheets.
+    const postOpts = body => ({
+      method: 'POST',
+      credentials: 'omit',
+      headers: { 'Content-Type': 'text/plain' }, // text/plain avoids CORS preflight
+      body: JSON.stringify(body),
+    });
+
     await Promise.all([
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'income',     rows: income     }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'expenses',   rows: expenses   }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'savings',    rows: savings    }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'categories', rows: categories }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSavingsGoal', goals: savingsGoal }) }),
+      fetch(SHEETS_URL, postOpts({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'income',     rows: income     })),
+      fetch(SHEETS_URL, postOpts({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'expenses',   rows: expenses   })),
+      fetch(SHEETS_URL, postOpts({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'savings',    rows: savings    })),
+      fetch(SHEETS_URL, postOpts({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'categories', rows: categories })),
+      fetch(SHEETS_URL, postOpts({ token: SHEETS_TOKEN, action:'saveSavingsGoal', goals: savingsGoal })),
     ]);
 
     showSyncStatus('saved');
