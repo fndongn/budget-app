@@ -13,13 +13,14 @@ const PALETTE = [
 const CAT_ICONS = ['🏠','🛒','🚗','💡','🎬','💊','🏋️','✈️','📚','🍽️','👕','💻','🎵','🐾','🎮'];
 
 // ── Google Sheets API ─────────────────────────────────────────────────────────
-const SHEETS_URL = 'YOUR_WEB_APP_URL_HERE'; // paste your URL from Step 3
+const SHEETS_URL   = 'YOUR_WEB_APP_URL_HERE';   // paste your deployed Web App URL
+const SHEETS_TOKEN = 'xK9mP2vL8qR4tYwZ433';  // must match the SECRET in Code.gs
 let isSyncing = false;
 
 async function sheetsLoad() {
   try {
     showSyncStatus('loading');
-    const res  = await fetch(`${SHEETS_URL}?action=load`);
+    const res  = await fetch(`${SHEETS_URL}?action=load&token=${SHEETS_TOKEN}`);
     const data = await res.json();
     if (data.error) throw new Error(data.error);
 
@@ -33,7 +34,7 @@ async function sheetsLoad() {
     (data.savings    || []).forEach(r => { ensure(r.monthKey); monthData[r.monthKey].savings.push(r); });
     (data.categories || []).forEach(r => { ensure(r.monthKey); monthData[r.monthKey].categories.push(r); });
 
-    const goalRes  = await fetch(`${SHEETS_URL}?action=loadSavingsGoal`);
+    const goalRes  = await fetch(`${SHEETS_URL}?action=loadSavingsGoal&token=${SHEETS_TOKEN}`);
     const goalData = await goalRes.json();
     savingsGoal = goalData || {};
 
@@ -60,11 +61,11 @@ async function sheetsSave() {
     });
 
     await Promise.all([
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ action:'saveSheet', sheet:'income',     rows: income     }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ action:'saveSheet', sheet:'expenses',   rows: expenses   }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ action:'saveSheet', sheet:'savings',    rows: savings    }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ action:'saveSheet', sheet:'categories', rows: categories }) }),
-      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ action:'saveSavingsGoal', goals: savingsGoal }) }),
+      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'income',     rows: income     }) }),
+      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'expenses',   rows: expenses   }) }),
+      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'savings',    rows: savings    }) }),
+      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSheet', sheet:'categories', rows: categories }) }),
+      fetch(SHEETS_URL, { method:'POST', body: JSON.stringify({ token: SHEETS_TOKEN, action:'saveSavingsGoal', goals: savingsGoal }) }),
     ]);
 
     showSyncStatus('saved');
@@ -82,17 +83,19 @@ function scheduleSave() {
 }
 
 function showSyncStatus(state) {
-  const el = document.getElementById('sync-status');
-  if (!el) return;
   const states = {
-    loading: { icon: '⟳', text: 'Loading...', cls: 'sync-loading' },
-    saving:  { icon: '⟳', text: 'Saving...',  cls: 'sync-saving'  },
-    saved:   { icon: '✓', text: 'Synced',      cls: 'sync-saved'   },
-    error:   { icon: '✕', text: 'Sync error',  cls: 'sync-error'   },
+    loading: { icon: '⟳', text: '...', cls: 'sync-loading' },
+    saving:  { icon: '⟳', text: '...',  cls: 'sync-saving'  },
+    saved:   { icon: '✓', text: '',      cls: 'sync-saved'   },
+    error:   { icon: '✕', text: '',      cls: 'sync-error'   },
   };
   const s = states[state] || states.saved;
-  el.className = `sync-status ${s.cls}`;
-  el.innerHTML = `<span class="sync-icon">${s.icon}</span>${s.text}`;
+  ['sync-status', 'sync-status-sidebar'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.className = `sync-status ${s.cls}`;
+    el.innerHTML = `<span class="sync-icon">${s.icon}</span>${s.text}`;
+  });
 }
 
 // ── State ─────────────────────────────────────────────────────────────────────
@@ -464,7 +467,10 @@ function renderBudgetProgress(data, spentByCat, totalBudgeted, totalSpent, total
 // ── Main render ───────────────────────────────────────────────────────────────
 function render() {
   const data = getMonth(activeKey);
-  document.getElementById('month-label').textContent = monthLabel(activeKey);
+  const ml = monthLabel(activeKey);
+  document.getElementById('month-label').textContent = ml;
+  const sml = document.getElementById('month-label-sidebar');
+  if (sml) sml.textContent = ml;
 
   const totalIncome   = data.income.reduce((s, i) => s + i.amount, 0);
   const totalBudgeted = data.categories.reduce((s, c) => s + c.budget, 0);
@@ -542,10 +548,14 @@ function render() {
     ? '<div class="empty-note">No sources added yet.</div>'
     : data.income.map(i => `
         <div class="item-row">
-          <span class="item-dot" style="background:var(--blue)"></span>
-          <span class="item-name">${i.name}</span>
-          <span class="item-date">${fmtDate(i.date)}</span>
-          <span class="item-amt">${fmt(i.amount)}</span>
+          <div class="item-icon-wrap" style="background:var(--indigo-l)">💰</div>
+          <div class="item-body">
+            <div class="item-name">${i.name}</div>
+            <div class="item-meta">${fmtDate(i.date)}</div>
+          </div>
+          <div class="item-right">
+            <span class="item-amt pos">+${fmt(i.amount)}</span>
+          </div>
           <button class="del-btn" onclick="delIncome(${i.id})">✕</button>
         </div>`).join('');
 
@@ -560,7 +570,7 @@ function render() {
         return `
         <div class="cat-tile">
           <div class="cat-top">
-            <div class="cat-icon" style="background:${col.bg}">${iconFor(idx)}</div>
+            <div class="cat-icon-sm" style="background:${col.bg}">${iconFor(idx)}</div>
             <span class="cat-name-lbl">${c.name}</span>
             <button class="del-sm" onclick="delCategory(${c.id})">✕</button>
           </div>
@@ -1014,23 +1024,34 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' && (e.ctrlKey || e.metaKey)) changeMonth(1);
 });
 
+// ── Page navigation ───────────────────────────────────────────────────────────
+function switchPage(name) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.bnav-item').forEach(b => b.classList.remove('active'));
+  document.querySelectorAll('.snav-item').forEach(b => b.classList.remove('active'));
+  const page  = document.getElementById(`page-${name}`);
+  const bnav  = document.getElementById(`bnav-${name}`);
+  const snav  = document.getElementById(`snav-${name}`);
+  if (page)  page.classList.add('active');
+  if (bnav)  bnav.classList.add('active');
+  if (snav)  snav.classList.add('active');
+  // Scroll to top
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+  document.querySelector('.pages')?.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
 // ── Theme toggle ──────────────────────────────────────────────────────────────
 function toggleTheme() {
-  const isLight = document.documentElement.classList.toggle('light');
-  localStorage.setItem('budgtr_theme', isLight ? 'light' : 'dark');
-  const label = document.getElementById('theme-label');
-  if (label) label.textContent = isLight ? 'Light' : 'Dark';
+  const isDark = document.documentElement.classList.toggle('dark');
+  localStorage.setItem('budgtr_theme', isDark ? 'dark' : 'light');
 }
 
 function loadTheme() {
   const saved = localStorage.getItem('budgtr_theme');
-  // Also respect OS preference if no saved preference
   const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-  const useLight = saved === 'light' || (!saved && !prefersDark);
-  if (useLight) {
-    document.documentElement.classList.add('light');
-    const label = document.getElementById('theme-label');
-    if (label) label.textContent = 'Light';
+  const useDark = saved === 'dark' || (!saved && prefersDark);
+  if (useDark) {
+    document.documentElement.classList.add('dark');
   }
 }
 

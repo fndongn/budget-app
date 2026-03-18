@@ -2,307 +2,413 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8"/>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Budgtr — Personal Finance</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0"/>
+  <title>Budgtr</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link href="https://fonts.googleapis.com/css2?family=Cabinet+Grotesk:wght@400;500;700;800&family=Instrument+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Instrument+Mono:wght@400;500&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css"/>
 </head>
 <body>
 
-<!-- Toast notification container -->
 <div id="toast-container"></div>
+<div id="alerts-panel" class="alerts-panel" style="display:none"></div>
 
-<div class="orb orb-1"></div>
-<div class="orb orb-2"></div>
-<div class="orb orb-3"></div>
+<div class="shell">
 
-<div class="app">
-
-  <!-- TOPBAR -->
-  <header class="topbar">
-    <div class="brand">
+  <!-- ── SIDEBAR NAV (tablet/desktop only) ── -->
+  <nav class="sidebar-nav" id="sidebar-nav">
+    <div class="sidebar-brand">
       <div class="brand-gem"></div>
       <span class="brand-name">Budgtr</span>
+      <span id="sync-status-sidebar" class="sync-status sync-saved" style="margin-left:auto"><span class="sync-icon">✓</span></span>
     </div>
-    <span id="sync-status" class="sync-status sync-saved">
-      <span class="sync-icon">✓</span>Synced
-    </span>
-    <div style="display:flex;align-items:center;gap:10px;">
-      <!-- Theme toggle -->
-      <button class="theme-toggle" onclick="toggleTheme()" id="theme-btn" title="Toggle light/dark mode">
+    <div class="sidebar-nav-items">
+      <button class="snav-item active" id="snav-overview" onclick="switchPage('overview')">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 3L21 9.5V20H15V14H9V20H3V9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+        Overview
+      </button>
+      <button class="snav-item" id="snav-income" onclick="switchPage('income')">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 20V4M5 11L12 4L19 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        Income
+      </button>
+      <button class="snav-item" id="snav-expenses" onclick="switchPage('expenses')">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Expenses
+      </button>
+      <button class="snav-item" id="snav-calendar" onclick="switchPage('calendar')">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10H21M8 3V7M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+        Calendar
+      </button>
+      <button class="snav-item" id="snav-savings" onclick="switchPage('savings')">
+        <svg class="snav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+        Savings
+      </button>
+    </div>
+    <div class="sidebar-bottom">
+      <div class="sidebar-month-nav">
+        <button class="mnav-btn" onclick="changeMonth(-1)">&#8249;</button>
+        <span class="mnav-label" id="month-label-sidebar">—</span>
+        <button class="mnav-btn" onclick="changeMonth(1)">&#8250;</button>
+      </div>
+      <button class="sidebar-theme-btn" onclick="toggleTheme()">
         <span class="theme-icon-dark">🌙</span>
         <span class="theme-icon-light">☀️</span>
-        <div class="toggle-track">
-          <div class="toggle-thumb"></div>
-        </div>
-        <span id="theme-label">Dark</span>
+        <span class="theme-icon-dark">Dark mode</span>
+        <span class="theme-icon-light">Light mode</span>
       </button>
+    </div>
+  </nav>
+
+  <!-- ── MAIN CONTENT ── -->
+  <div class="main-content">
+
+  <!-- TOP BAR -->
+  <header class="topbar">
+    <div class="topbar-left">
+      <div class="brand-gem"></div>
+      <span class="brand-name">Budgtr</span>
+      <span id="sync-status" class="sync-status sync-saved"><span class="sync-icon">✓</span></span>
+    </div>
+    <div class="topbar-right">
       <div class="month-nav">
         <button class="mnav-btn" onclick="changeMonth(-1)">&#8249;</button>
         <span class="mnav-label" id="month-label">—</span>
         <button class="mnav-btn" onclick="changeMonth(1)">&#8250;</button>
       </div>
+      <button class="icon-btn" onclick="toggleTheme()" title="Toggle theme">
+        <span class="theme-icon-dark">🌙</span>
+        <span class="theme-icon-light">☀️</span>
+      </button>
     </div>
   </header>
 
-  <!-- HERO -->
-  <section class="hero">
-    <div class="hero-left">
-      <div class="hero-eyebrow">Total Income</div>
-      <div class="hero-amount" id="sum-income">$0</div>
-      <div class="hero-sub" id="income-sub">Add income sources below</div>
-    </div>
-    <div class="hero-pills">
-      <div class="hpill hpill-blue">
-        <span class="hpill-lbl">Budgeted</span>
-        <span class="hpill-val" id="sum-budgeted">$0</span>
-      </div>
-      <div class="hpill hpill-coral">
-        <span class="hpill-lbl">Spent</span>
-        <span class="hpill-val" id="sum-spent">$0</span>
-      </div>
-      <div class="hpill hpill-emerald">
-        <span class="hpill-lbl">Saved</span>
-        <span class="hpill-val" id="sum-saved">$0</span>
-      </div>
-      <div class="hpill hpill-emerald" id="hpill-remaining">
-        <span class="hpill-lbl">Remaining</span>
-        <span class="hpill-val" id="sum-remaining">$0</span>
-        <span class="hpill-sub" id="remaining-sub-lbl">Add income first</span>
-      </div>
-    </div>
-  </section>
+  <!-- PAGES -->
+  <main class="pages">
 
-  <!-- OVERALL BUDGET PROGRESS -->
-  <div class="budget-progress-card">
-    <div class="bp-header">
-      <div class="bp-title-group">
-        <span class="bp-title">Total Income vs Spending + Savings</span>
-        <span class="bp-status-badge" id="bp-status-badge">On Track</span>
-      </div>
-      <div class="bp-amounts">
-        <span class="bp-spent-label">Spent + Saved <strong id="bp-spent">$0</strong></span>
-        <span class="bp-sep">of</span>
-        <span class="bp-budget-label">Total Income <strong id="bp-budget">$0</strong></span>
-      </div>
-    </div>
-
-    <!-- Main stacked bar -->
-    <div class="bp-bar-wrap">
-      <div class="bp-bar-track">
-        <div class="bp-bar-spent" id="bp-bar-spent"></div>
-        <div class="bp-bar-saved" id="bp-bar-saved"></div>
-      </div>
-      <div class="bp-bar-markers">
-        <div class="bp-marker" id="bp-marker-75" style="left:75%">
-          <div class="bp-marker-line"></div>
-          <span class="bp-marker-lbl">75%</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Legend + percentage -->
-    <div class="bp-footer">
-      <div class="bp-legend">
-        <span class="bp-leg-dot spent"></span><span class="bp-leg-txt">Expenses</span>
-        <span class="bp-leg-dot saved"></span><span class="bp-leg-txt">Savings</span>
-        <span class="bp-leg-dot free"></span><span class="bp-leg-txt">Remaining</span>
-      </div>
-      <div class="bp-pct-group">
-        <span class="bp-pct-lbl">Used</span>
-        <span class="bp-pct-val" id="bp-pct">0%</span>
-      </div>
-    </div>
-
-    <!-- Per-category mini bars -->
-    <div class="bp-cats" id="bp-cats"></div>
-  </div>
-
-  <!-- BUDGET ALERTS PANEL -->
-  <div id="alerts-panel" class="alerts-panel" style="display:none"></div>
-
-  <!-- MAIN GRID -->
-  <div class="main-grid">
-
-    <!-- COL 1 -->
-    <div class="col">
-      <div class="card s1">
-        <div class="card-head">
-          <h2 class="card-title">Income</h2>
-          <span class="chip c-blue" id="income-badge">$0</span>
-        </div>
-        <div class="item-list" id="income-list"></div>
-        <div class="frow">
-          <input class="inp" type="text" id="inc-name" placeholder="Source (e.g. Salary)"/>
-          <input class="inp w80" type="number" id="inc-amt" placeholder="Amount" min="0"/>
-          <button class="btn b-blue" onclick="addIncome()">+ Add</button>
-        </div>
-      </div>
-
-      <div class="card s2">
-        <div class="card-head">
-          <h2 class="card-title">Spending Breakdown</h2>
-        </div>
-        <div class="donut-wrap">
-          <canvas id="donut-canvas" width="180" height="180"></canvas>
-          <div class="donut-center">
-            <div class="donut-lbl">Spent</div>
-            <div class="donut-num" id="donut-val">$0</div>
+    <!-- OVERVIEW -->
+    <section class="page active" id="page-overview">
+      <div class="hero-card">
+        <div class="hero-card-bg"></div>
+        <div class="hero-chip"><span class="hero-chip-dot"></span>This Month</div>
+        <div class="hero-eyebrow">Total Income</div>
+        <div class="hero-amount" id="sum-income">$0</div>
+        <div class="hero-sub" id="income-sub">Add income sources</div>
+        <div class="hero-stats">
+          <div class="hstat">
+            <div class="hstat-top">
+              <div class="hstat-icon hstat-red">↑</div>
+              <div class="hstat-lbl">Expenses</div>
+            </div>
+            <div class="hstat-val" id="sum-spent">$0</div>
+          </div>
+          <div class="hstat-divider"></div>
+          <div class="hstat">
+            <div class="hstat-top">
+              <div class="hstat-icon hstat-green">↓</div>
+              <div class="hstat-lbl">Savings</div>
+            </div>
+            <div class="hstat-val" id="sum-saved">$0</div>
+          </div>
+          <div class="hstat-divider"></div>
+          <div class="hstat">
+            <div class="hstat-top">
+              <div class="hstat-icon hstat-amber">◈</div>
+              <div class="hstat-lbl">Remaining</div>
+            </div>
+            <div class="hstat-val" id="sum-remaining">$0</div>
           </div>
         </div>
-        <div id="donut-legend" class="legend"></div>
-      </div>
-    </div>
-
-    <!-- COL 2 -->
-    <div class="col">
-      <div class="card s2">
-        <div class="card-head">
-          <h2 class="card-title">Budget Categories</h2>
-          <span class="chip c-violet" id="cat-badge">$0</span>
-        </div>
-        <div class="cat-grid" id="cat-grid"></div>
-        <div class="frow">
-          <input class="inp" type="text" id="cat-name" placeholder="Category name"/>
-          <input class="inp w80" type="number" id="cat-budget" placeholder="Budget" min="0"/>
-          <button class="btn b-violet" onclick="addCategory()">+ Add</button>
-        </div>
       </div>
 
-      <div class="card s3">
-        <div class="card-head">
-          <h2 class="card-title">Expenses</h2>
-          <span class="chip c-coral" id="exp-badge">$0</span>
-        </div>
-        <div class="exp-list" id="exp-list"></div>
-        <div class="frow">
-          <input class="inp" type="text" id="exp-desc" placeholder="Description"/>
-          <input class="inp w80" type="number" id="exp-amt" placeholder="Amount" min="0"/>
-          <select class="inp w100" id="exp-cat"><option value="">Category</option></select>
-          <button class="btn b-coral" onclick="addExpense()">+ Add</button>
-        </div>
-      </div>
+      <div id="alerts-panel" class="alerts-panel" style="display:none"></div>
 
-      <!-- TRANSACTION CALENDAR -->
-      <div class="card s4" id="cal-card">
-        <div class="card-head">
-          <h2 class="card-title">Transaction Calendar</h2>
-          <span class="chip c-blue" id="cal-badge">0 days</span>
-        </div>
-        <div class="cal-grid" id="cal-grid"></div>
-
-        <!-- Day panel — opens when any day is clicked -->
-        <div class="cal-detail" id="cal-detail" style="display:none">
-          <div class="cal-detail-head">
-            <span class="cal-detail-date" id="cal-detail-date"></span>
-            <button class="cal-detail-close" onclick="closeDayDetail()">✕</button>
+      <div class="overview-grid">
+        <div class="section-card s1 full-width">
+          <div class="sc-header">
+            <span class="sc-title">Budget Overview</span>
+            <span class="bp-status-badge on-track" id="bp-status-badge">On Track</span>
           </div>
-
-          <!-- Existing transactions for this day -->
-          <div class="cal-detail-list" id="cal-detail-list"></div>
-          <div class="cal-detail-total" id="cal-detail-total"></div>
-
-          <!-- Inline quick-add form -->
-          <div class="cal-add-section">
-            <div class="cal-add-title">Add transaction for this day</div>
-            <div class="cal-add-tabs">
-              <button class="cal-tab active" id="cal-tab-expense" onclick="switchCalTab('expense')">Expense</button>
-              <button class="cal-tab" id="cal-tab-income" onclick="switchCalTab('income')">Income</button>
-              <button class="cal-tab" id="cal-tab-saving" onclick="switchCalTab('saving')">Saving</button>
+          <div class="bp-bar-wrap">
+            <div class="bp-bar-track">
+              <div class="bp-bar-spent" id="bp-bar-spent"></div>
+              <div class="bp-bar-saved" id="bp-bar-saved"></div>
             </div>
-
-            <!-- Expense form -->
-            <div class="cal-form" id="cal-form-expense">
-              <input class="inp" type="text" id="cal-exp-desc" placeholder="Description"/>
-              <div class="frow" style="margin-top:6px">
-                <input class="inp" type="number" id="cal-exp-amt" placeholder="Amount" min="0"/>
-                <select class="inp" id="cal-exp-cat"><option value="">Category</option></select>
-                <button class="btn b-coral" onclick="calAddExpense()">+ Add</button>
-              </div>
-            </div>
-
-            <!-- Income form -->
-            <div class="cal-form" id="cal-form-income" style="display:none">
-              <div class="frow">
-                <input class="inp" type="text" id="cal-inc-name" placeholder="Source (e.g. Salary)"/>
-                <input class="inp w80" type="number" id="cal-inc-amt" placeholder="Amount" min="0"/>
-                <button class="btn b-blue" onclick="calAddIncome()">+ Add</button>
-              </div>
-            </div>
-
-            <!-- Saving form -->
-            <div class="cal-form" id="cal-form-saving" style="display:none">
-              <div class="frow">
-                <input class="inp" type="text" id="cal-sav-desc" placeholder="Description"/>
-                <input class="inp w80" type="number" id="cal-sav-amt" placeholder="Amount" min="0"/>
-                <button class="btn b-emerald" onclick="calAddSaving()">+ Save</button>
+            <div class="bp-bar-markers">
+              <div class="bp-marker" style="left:80%">
+                <div class="bp-marker-line"></div>
+                <span class="bp-marker-lbl">80%</span>
               </div>
             </div>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- COL 3 -->
-    <div class="col">
-      <div class="card card-savings s3">
-        <div class="card-head">
-          <h2 class="card-title">Savings</h2>
-          <span class="chip c-emerald" id="savings-badge">$0</span>
-        </div>
-
-        <div class="ring-block">
-          <div class="ring-wrap">
-            <svg viewBox="0 0 120 120" class="ring-svg">
-              <circle class="ring-track" cx="60" cy="60" r="48"/>
-              <circle class="ring-progress" id="ring-progress" cx="60" cy="60" r="48"
-                transform="rotate(-90 60 60)"
-                stroke-dasharray="301.59" stroke-dashoffset="301.59"/>
-            </svg>
-            <div class="ring-center">
-              <div class="ring-pct" id="ring-pct">0%</div>
-              <div class="ring-sub">of goal</div>
+          <div class="bp-row">
+            <div class="bp-legend">
+              <span class="bp-dot spent"></span><span class="bp-ltxt">Expenses <strong id="bp-spent">$0</strong></span>
+              <span class="bp-dot saved"></span><span class="bp-ltxt">Savings</span>
+              <span class="bp-dot free"></span><span class="bp-ltxt">Remaining</span>
+            </div>
+            <div class="bp-pct-wrap">
+              <span class="bp-pct" id="bp-pct">0%</span>
+              <span class="bp-pct-sub">of <strong id="bp-budget">$0</strong></span>
             </div>
           </div>
-          <div class="ring-details">
-            <label class="goal-label">Monthly Goal</label>
-            <div class="goal-inp-row">
-              <span class="goal-dollar">$</span>
-              <input type="number" class="goal-inp" id="savings-goal" placeholder="0" min="0" oninput="saveSavingsGoal()"/>
+          <div class="bp-cats" id="bp-cats"></div>
+        </div>
+
+        <div class="section-card s2">
+          <div class="sc-header">
+            <span class="sc-title">Spending Breakdown</span>
+          </div>
+          <div class="donut-wrap">
+            <canvas id="donut-canvas" width="180" height="180"></canvas>
+            <div class="donut-center">
+              <div class="donut-lbl">Spent</div>
+              <div class="donut-num" id="donut-val">$0</div>
             </div>
-            <div class="ring-status" id="ring-status">Set a goal to track progress</div>
-            <div class="alltime-row">
-              <span class="alltime-lbl">All-time savings</span>
-              <span class="alltime-amt" id="lifetime-val">$0</span>
+          </div>
+          <div id="donut-legend" class="legend"></div>
+        </div>
+
+        <div class="section-card s3">
+          <div class="sc-header">
+            <span class="sc-title">Recent Transactions</span>
+            <button class="sc-link" onclick="switchPage('expenses')">See all →</button>
+          </div>
+          <div id="recent-list" class="tx-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- INCOME -->
+    <section class="page" id="page-income">
+      <div class="page-head">
+        <h2 class="page-title">Income</h2>
+        <span class="chip c-blue" id="income-badge">$0</span>
+      </div>
+      <div class="income-grid">
+        <div class="section-card">
+          <div class="sc-header"><span class="sc-title">Sources</span></div>
+          <div class="item-list" id="income-list"></div>
+        </div>
+        <div class="section-card">
+          <div class="add-form">
+            <div class="add-form-title">Add income source</div>
+            <div class="form-field">
+              <label class="field-lbl">Source name</label>
+              <input class="inp" type="text" id="inc-name" placeholder="e.g. Salary, Freelance"/>
+            </div>
+            <div class="form-field">
+              <label class="field-lbl">Amount</label>
+              <div class="inp-prefix-wrap">
+                <span class="inp-prefix">$</span>
+                <input class="inp inp-prefixed" type="number" id="inc-amt" placeholder="0.00" min="0"/>
+              </div>
+            </div>
+            <button class="btn-full b-blue" onclick="addIncome()">+ Add Income</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section class="page" id="page-expenses">
+      <div class="page-head">
+        <h2 class="page-title">Expenses</h2>
+        <span class="chip c-coral" id="exp-badge">$0</span>
+      </div>
+      <div class="expenses-grid">
+        <div class="section-card">
+          <div class="sc-header">
+            <span class="sc-title">Budget Categories</span>
+            <span class="chip c-violet" id="cat-badge">$0</span>
+          </div>
+          <div class="cat-grid" id="cat-grid"></div>
+          <div class="add-form">
+            <div class="add-form-title">Add category</div>
+            <div class="form-row-2">
+              <div class="form-field">
+                <label class="field-lbl">Name</label>
+                <input class="inp" type="text" id="cat-name" placeholder="e.g. Food"/>
+              </div>
+              <div class="form-field">
+                <label class="field-lbl">Budget</label>
+                <div class="inp-prefix-wrap">
+                  <span class="inp-prefix">$</span>
+                  <input class="inp inp-prefixed" type="number" id="cat-budget" placeholder="0" min="0"/>
+                </div>
+              </div>
+            </div>
+            <button class="btn-full b-violet" onclick="addCategory()">+ Add Category</button>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="sc-header"><span class="sc-title">All Expenses</span></div>
+          <div class="exp-list" id="exp-list"></div>
+          <div class="add-form">
+            <div class="add-form-title">Log an expense</div>
+            <div class="form-field">
+              <label class="field-lbl">Description</label>
+              <input class="inp" type="text" id="exp-desc" placeholder="e.g. Groceries, Netflix"/>
+            </div>
+            <div class="form-row-2">
+              <div class="form-field">
+                <label class="field-lbl">Amount</label>
+                <div class="inp-prefix-wrap">
+                  <span class="inp-prefix">$</span>
+                  <input class="inp inp-prefixed" type="number" id="exp-amt" placeholder="0.00" min="0"/>
+                </div>
+              </div>
+              <div class="form-field">
+                <label class="field-lbl">Category</label>
+                <select class="inp" id="exp-cat"><option value="">Select…</option></select>
+              </div>
+            </div>
+            <button class="btn-full b-coral" onclick="addExpense()">+ Add Expense</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- CALENDAR -->
+    <section class="page" id="page-calendar">
+      <div class="page-head">
+        <h2 class="page-title">Calendar</h2>
+        <span class="chip c-blue" id="cal-badge">0 days</span>
+      </div>
+      <div class="calendar-wrap">
+        <div class="section-card">
+          <div class="cal-grid" id="cal-grid"></div>
+          <div class="cal-detail" id="cal-detail" style="display:none">
+            <div class="cal-detail-head">
+              <span class="cal-detail-date" id="cal-detail-date"></span>
+              <button class="cal-detail-close" onclick="closeDayDetail()">✕</button>
+            </div>
+            <div class="cal-detail-list" id="cal-detail-list"></div>
+            <div class="cal-detail-total" id="cal-detail-total"></div>
+            <div class="cal-add-section">
+              <div class="cal-add-title">Add transaction for this day</div>
+              <div class="cal-add-tabs">
+                <button class="cal-tab active" id="cal-tab-expense" onclick="switchCalTab('expense')">Expense</button>
+                <button class="cal-tab" id="cal-tab-income" onclick="switchCalTab('income')">Income</button>
+                <button class="cal-tab" id="cal-tab-saving" onclick="switchCalTab('saving')">Saving</button>
+              </div>
+              <div class="cal-form" id="cal-form-expense">
+                <input class="inp" type="text" id="cal-exp-desc" placeholder="Description"/>
+                <div class="frow" style="margin-top:8px">
+                  <input class="inp" type="number" id="cal-exp-amt" placeholder="Amount" min="0"/>
+                  <select class="inp" id="cal-exp-cat"><option value="">Category</option></select>
+                  <button class="btn b-coral" onclick="calAddExpense()">+ Add</button>
+                </div>
+              </div>
+              <div class="cal-form" id="cal-form-income" style="display:none">
+                <div class="frow">
+                  <input class="inp" type="text" id="cal-inc-name" placeholder="Source"/>
+                  <input class="inp w80" type="number" id="cal-inc-amt" placeholder="Amount" min="0"/>
+                  <button class="btn b-blue" onclick="calAddIncome()">+ Add</button>
+                </div>
+              </div>
+              <div class="cal-form" id="cal-form-saving" style="display:none">
+                <div class="frow">
+                  <input class="inp" type="text" id="cal-sav-desc" placeholder="Description"/>
+                  <input class="inp w80" type="number" id="cal-sav-amt" placeholder="Amount" min="0"/>
+                  <button class="btn b-emerald" onclick="calAddSaving()">+ Save</button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
+      </div>
+    </section>
 
-        <div class="item-list" id="savings-list"></div>
-        <div class="frow">
-          <input class="inp" type="text" id="sav-desc" placeholder="Description"/>
-          <input class="inp w80" type="number" id="sav-amt" placeholder="Amount" min="0"/>
-          <button class="btn b-emerald" onclick="addSaving()">+ Save</button>
+    <!-- SAVINGS -->
+    <section class="page" id="page-savings">
+      <div class="page-head">
+        <h2 class="page-title">Savings</h2>
+        <span class="chip c-emerald" id="savings-badge">$0</span>
+      </div>
+      <div class="savings-grid">
+        <div class="section-card savings-card">
+          <div class="ring-block">
+            <div class="ring-wrap">
+              <svg viewBox="0 0 120 120" class="ring-svg">
+                <circle class="ring-track" cx="60" cy="60" r="48"/>
+                <circle class="ring-progress" id="ring-progress" cx="60" cy="60" r="48"
+                  transform="rotate(-90 60 60)" stroke-dasharray="301.59" stroke-dashoffset="301.59"/>
+              </svg>
+              <div class="ring-center">
+                <div class="ring-pct" id="ring-pct">0%</div>
+                <div class="ring-sub">of goal</div>
+              </div>
+            </div>
+            <div class="ring-details">
+              <label class="goal-label">Monthly Goal</label>
+              <div class="goal-inp-row">
+                <span class="goal-dollar">$</span>
+                <input type="number" class="goal-inp" id="savings-goal" placeholder="0" min="0" oninput="saveSavingsGoal()"/>
+              </div>
+              <div class="ring-status" id="ring-status">Set a goal to track progress</div>
+              <div class="alltime-row">
+                <span class="alltime-lbl">All-time savings</span>
+                <span class="alltime-amt" id="lifetime-val">$0</span>
+              </div>
+            </div>
+          </div>
+          <div class="item-list" id="savings-list"></div>
+          <div class="add-form">
+            <div class="add-form-title">Log a saving</div>
+            <div class="form-field">
+              <label class="field-lbl">Description</label>
+              <input class="inp" type="text" id="sav-desc" placeholder="e.g. Emergency fund"/>
+            </div>
+            <div class="form-field">
+              <label class="field-lbl">Amount</label>
+              <div class="inp-prefix-wrap">
+                <span class="inp-prefix">$</span>
+                <input class="inp inp-prefixed" type="number" id="sav-amt" placeholder="0.00" min="0"/>
+              </div>
+            </div>
+            <button class="btn-full b-emerald" onclick="addSaving()">+ Add Saving</button>
+          </div>
+        </div>
+        <div class="section-card">
+          <div class="sc-header"><span class="sc-title">Monthly History</span></div>
+          <div class="history-scroll">
+            <table class="htbl">
+              <thead><tr><th>Month</th><th>Income</th><th>Spent</th><th>Saved</th></tr></thead>
+              <tbody id="history-body"></tbody>
+            </table>
+          </div>
         </div>
       </div>
+    </section>
 
-      <div class="card s4">
-        <div class="card-head">
-          <h2 class="card-title">Monthly History</h2>
-        </div>
-        <div class="history-scroll">
-          <table class="htbl">
-            <thead><tr><th>Month</th><th>Income</th><th>Spent</th><th>Saved</th></tr></thead>
-            <tbody id="history-body"></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
+  </main>
 
-  </div>
-</div>
+  <!-- BOTTOM NAV (mobile only) -->
+  <nav class="bottom-nav">
+    <button class="bnav-item active" id="bnav-overview" onclick="switchPage('overview')">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none"><path d="M3 9.5L12 3L21 9.5V20H15V14H9V20H3V9.5Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      <span>Overview</span>
+    </button>
+    <button class="bnav-item" id="bnav-income" onclick="switchPage('income')">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 20V4M5 11L12 4L19 11" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <span>Income</span>
+    </button>
+    <button class="bnav-item" id="bnav-expenses" onclick="switchPage('expenses')">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Expenses</span>
+    </button>
+    <button class="bnav-item" id="bnav-calendar" onclick="switchPage('calendar')">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none"><rect x="3" y="5" width="18" height="16" rx="2" stroke="currentColor" stroke-width="1.8"/><path d="M3 10H21M8 3V7M16 3V7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Calendar</span>
+    </button>
+    <button class="bnav-item" id="bnav-savings" onclick="switchPage('savings')">
+      <svg class="bnav-icon" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" stroke-width="1.5"/></svg>
+      <span>Savings</span>
+    </button>
+  </nav>
 
+  </div><!-- /.main-content -->
+</div><!-- /.shell -->
 <script src="app.js"></script>
 </body>
 </html>
